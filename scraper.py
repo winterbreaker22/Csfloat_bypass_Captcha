@@ -10,9 +10,13 @@ result_csv = 'result.csv'
 
 with sync_playwright() as p:
     browser = p.chromium.launch(headless=False)  
-    page = browser.new_page()
+    context = browser.new_context(
+        viewport={"width": 1600, "height": 900}  # Set to your desired resolution
+    )
+    page = context.new_page()
     
     page.goto("https://csfloat.com/db?order=4&min=0&max=1")
+    page.evaluate("window.resizeTo(screen.availWidth, screen.availHeight);")
     page.wait_for_load_state("networkidle")
     page.click('text=Sign In')
     time.sleep(10)
@@ -28,8 +32,11 @@ with sync_playwright() as p:
     page.mouse.click(10, 10)
     page.click("text=Database")
     time.sleep(5)
-    page.click("app-search-row[key='d-sort'] mat-form-field").click()
-    page.click("text=Recently Updated").click()
+
+    element = page.query_selector("app-search-row:first-of-type mat-form-field")
+    if element:
+        element.click()  # Click on the element
+    page.click("text=Recently Updated")
     time.sleep(5)
     page.click("text=Search on Database")
     time.sleep(10)
@@ -49,9 +56,15 @@ with sync_playwright() as p:
         rows = page.query_selector_all("table tr")  # Adjust the selector if needed
 
         for row in rows:
-            name_prefix = row.query_selector_all('app-item-name-row div.name > div.prefix').getText()
-            name_suffix = row.query_selector_all('app-item-name-row div.name > div.suffix').getText()
-            csv_writer.writerow([item, date, steamId])  # Append the row data to CSV
+            name_prefix = row.query_selector_all('app-item-name-row div.name > div.prefix').get_text()
+            name_suffix = row.query_selector_all('app-item-name-row div.name > div.suffix').get_text()
+            field = row.query_selector_all('td:nth-of-type(2) span').get_text()
+            steamId = row.query_selector_all('app-steam-avatar a').get_attribute('href')
+            print ("name_prefix: ", name_prefix)
+            print ("name_suffix: ", name_suffix)
+            print ("field: ", field)
+            print ("steamId: ", steamId)
+            # csv_writer.writerow([item, date, steamId])  # Append the row data to CSV
     
     # Close the browser
     browser.close()
