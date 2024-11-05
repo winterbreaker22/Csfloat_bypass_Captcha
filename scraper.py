@@ -1,30 +1,57 @@
 from playwright.sync_api import sync_playwright
+import time
+import os
+import csv
 
-# Launching Playwright
+email = f'jeff_krafve@hotmail.com'
+password = f'Leriken123$'
+
+result_csv = 'result.csv'
+
 with sync_playwright() as p:
-    # Step 1: Start a browser instance (you can use 'firefox' or 'webkit' instead of 'chromium' if needed)
-    browser = p.chromium.launch(headless=False)  # Set headless=True to run without a visible window
+    browser = p.chromium.launch(headless=False)  
     page = browser.new_page()
     
-    # Step 2: Go to the login page
-    page.goto("https://example.com/login")
+    page.goto("https://csfloat.com/db?order=4&min=0&max=1")
+    page.wait_for_load_state("networkidle")
+    page.click('text=Sign In')
+    time.sleep(10)
 
-    # Step 3: Fill out the login form
-    page.fill("input[name='username']", "your_username")  # Replace with actual field name
-    page.fill("input[name='password']", "your_password")  # Replace with actual field name
+    page.fill("form input[type='text']", email)  # Replace with actual field name
+    page.fill("form input[type='password']", password)  # Replace with actual field name
+    time.sleep(2)
+    page.click("form button[type='submit']")
+    time.sleep(10)
     
-    # Step 4: Click the login button
-    page.click("button[type='submit']")  # Replace with actual selector for login button
-    
-    # Optional: Wait for navigation or an element that indicates successful login
-    page.wait_for_selector("text=Welcome")  # Adjust selector to match a login success indicator
+    page.click("#imageLogin")
+    time.sleep(10)
+    page.mouse.click(10, 10)
+    page.click("text=Database")
+    time.sleep(5)
+    page.click("app-search-row[key='d-sort'] mat-form-field").click()
+    page.click("text=Recently Updated").click()
+    time.sleep(5)
+    page.click("text=Search on Database")
+    time.sleep(10)
 
-    # Step 5: Navigate to another page after login
-    page.goto("https://example.com/protected-page")
-    
-    # Step 6: Extract data (for example, the title of the protected page)
-    title = page.title()
-    print("Page Title:", title)
+    # Check file existance
+    file_exists = os.path.isfile(result_csv) and os.stat(result_csv).st_size != 0
+
+    # Step 5: Open the existing CSV file in append mode
+    with open(result_csv, mode='a', newline='', encoding='utf-8') as csvfile:
+        csv_writer = csv.writer(csvfile)
+
+        # Write header if the file is new
+        if not file_exists:
+            csv_writer.writerow(["Item", "Date", "SteamID"])  # Adjust based on your table structure
+
+        # Step 6: Scrape each row of the table
+        rows = page.query_selector_all("table tr")  # Adjust the selector if needed
+
+        for row in rows:
+            name_prefix = row.query_selector_all('app-item-name-row div.name > div.prefix').getText()
+            name_suffix = row.query_selector_all('app-item-name-row div.name > div.suffix').getText()
+            csv_writer.writerow([item, date, steamId])  # Append the row data to CSV
     
     # Close the browser
     browser.close()
